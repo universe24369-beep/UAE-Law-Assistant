@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "../lib/motion-shim";
 import { 
   ShieldCheck, 
   Scale, 
@@ -22,9 +22,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { cn } from "../lib/utils";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, db, handleFirestoreError, OperationType } from "../lib/firebase";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useUser } from "../contexts/UserContext";
 
 const STEPS = [
   { id: 1, title: "identity", icon: User },
@@ -36,7 +36,7 @@ const STEPS = [
 export default function LawyerRegistration() {
   const navigate = useNavigate();
   const { t, isRtl } = useLanguage();
-  const [user] = useAuthState(auth);
+  const { user } = useUser();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);

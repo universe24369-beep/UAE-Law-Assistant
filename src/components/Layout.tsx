@@ -1,16 +1,17 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Scale, MessageSquare, Users, Calendar, LogIn, LogOut, Search, Globe, Paperclip, CheckCircle2, FlaskConical, Loader2, Zap, ShieldCheck, LifeBuoy } from "lucide-react";
-import { auth, signInWithGoogle, logout, db } from "../lib/firebase";
-import { useAuthState } from "react-firebase-hooks/auth";
+import { signInWithGoogle, db } from "../lib/firebase";
 import { doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "../lib/motion-shim";
 import { cn } from "../lib/utils";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useUser } from "../contexts/UserContext";
+import { useAuthBridge } from "../contexts/AuthBridge";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading, lawyerProfile, isSuperAdmin, toggleLawyerRole } = useUser();
+  const { signOut } = useAuthBridge();
   const location = useLocation();
   const { language, setLanguage, t, isRtl } = useLanguage();
 
@@ -35,7 +36,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     : [
         { name: t("home"), path: "/", icon: MessageSquare },
         { name: t("assistant"), path: "/assistant", icon: Zap },
-        { name: t("findLawyer"), path: "/lawyers", icon: Users },
         { name: t("myBookings"), path: "/appointments", icon: Calendar },
       ];
 
@@ -170,11 +170,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     )}
                     <p className="text-xs font-bold text-prestige-900">{user.displayName}</p>
                   </div>
-                  <button onClick={logout} className="text-[10px] uppercase font-black tracking-widest text-prestige-400 hover:text-red-500 transition-colors">
+                  <button onClick={signOut} className="text-[10px] uppercase font-black tracking-widest text-prestige-400 hover:text-red-500 transition-colors">
                     {t("logout")}
                   </button>
                 </div>
-                <img src={user.photoURL || ""} alt="avatar" className="w-10 h-10 rounded-xl border-2 border-prestige-100 shadow-sm" />
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="avatar" className="w-10 h-10 rounded-xl border-2 border-prestige-100 shadow-sm object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl border-2 border-prestige-100 shadow-sm bg-accent-indigo/10 text-accent-indigo flex items-center justify-center font-black text-xs">
+                    {(user.displayName || "U").slice(0, 2).toUpperCase()}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex gap-2">
@@ -183,7 +189,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className="p-2.5 sm:px-5 sm:py-2.5 bg-prestige-950 text-white rounded-xl text-sm font-bold hover:bg-prestige-800 transition-all shadow-xl shadow-prestige-950/10 active:scale-95 flex items-center justify-center"
                   disabled={isAuthActionLoading}
                 >
-                  <span className="hidden sm:inline">{t("register")}</span>
+                  <span className="hidden sm:inline">{t("login") || "Sign in"}</span>
                   <LogIn className="w-5 h-5 sm:hidden" />
                 </button>
               </div>
@@ -262,7 +268,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                               </>
                             )}
                           </div>
-                          <button onClick={logout} className="text-[10px] uppercase font-black tracking-widest text-red-500">
+                          <button onClick={signOut} className="text-[10px] uppercase font-black tracking-widest text-red-500">
                             {t("logout")}
                           </button>
                         </div>

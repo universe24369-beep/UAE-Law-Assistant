@@ -18,6 +18,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "firebase/firestore": [
+        "./src/lib/firestore-shim.ts"
       ]
     },
     "allowImportingTsExtensions": true,

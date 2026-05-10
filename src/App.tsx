@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import { format } from "date-fns";
 import { Search, MessageSquare, Scale, Users, Gavel, ShieldCheck, ArrowRight, Send, Loader2, Calendar, CheckCircle2, Briefcase, Mic, MicOff, Volume2, VolumeX, FileText, X, Paperclip, Camera, Image as ImageIcon, RefreshCw, Star, Filter, Tag, ChevronDown, DollarSign, MapPin, Zap } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "./lib/motion-shim";
 import { getLegalAdvice, getLawyerCoPilotAdvice } from "./services/legalService";
 import { searchLocalLegislation, formatLawsForContext } from "./services/legislationService";
 import { getLawyers, Lawyer, getLawyerByUserId } from "./services/lawyerService";
 import ReactMarkdown from "react-markdown";
 import LawyerCard from "./components/LawyerCard";
 import { cn } from "./lib/utils";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, db, signInWithGoogle, handleFirestoreError, OperationType } from "./lib/firebase";
+import { db, signInWithGoogle, handleFirestoreError, OperationType } from "./lib/firebase";
 import { collection, addDoc, query, where, getDocs, onSnapshot, orderBy, serverTimestamp, updateDoc, doc, setDoc } from "firebase/firestore";
 import { useLanguage } from "./contexts/LanguageContext";
 import { extractTextFromPdf } from "./lib/pdfUtils";
@@ -25,6 +24,7 @@ import LawyerAssistant from "./pages/LawyerAssistant";
 import Management from "./pages/Management";
 import Support from "./pages/Support";
 import Legislation from "./pages/Legislation";
+import LawyersPage from "./pages/LawyersPage";
 
 import LawyerSettings from "./pages/LawyerSettings";
 
@@ -87,7 +87,7 @@ function Home() {
               <p className="text-lg md:text-xl text-prestige-300 max-w-xl font-medium leading-relaxed">
                 {lawyerProfile 
                    ? t("aiCoPilotDesc")
-                   : t("heroSubtitle")}
+                   : "Instant, verified legal analysis based on Federal and Local UAE legislation. Navigate your matters with confidence."}
               </p>
             </div>
             
@@ -136,13 +136,7 @@ function Home() {
                     onClick={() => navigate("/assistant")}
                     className="px-8 md:px-10 py-4 md:py-5 bg-white text-prestige-950 rounded-2xl font-black hover:bg-accent-gold transition-all flex items-center justify-center gap-3 text-sm shadow-2xl shadow-white/5 active:scale-95"
                   >
-                    {t("startChat")} <ArrowRight className={cn("w-5 h-5", isRtl && "rotate-180")} />
-                  </button>
-                  <button 
-                    onClick={() => navigate("/lawyers")}
-                    className="px-8 md:px-10 py-4 md:py-5 bg-prestige-900/50 backdrop-blur-xl border border-prestige-700 text-white rounded-2xl font-black hover:bg-prestige-800 transition-all flex items-center justify-center gap-3 text-sm active:scale-95"
-                  >
-                    {t("findLawyer")}
+                    Open Copilot <ArrowRight className={cn("w-5 h-5", isRtl && "rotate-180")} />
                   </button>
                 </>
               )}
@@ -248,13 +242,13 @@ function Home() {
         <section className="container mx-auto px-6">
           <div className="text-center space-y-6 mb-24">
             <h2 className="text-4xl md:text-5xl font-extrabold text-prestige-950 tracking-tighter">{t("howItWorks")}</h2>
-            <p className="text-prestige-500 max-w-2xl mx-auto text-lg font-medium leading-relaxed">Providing a seamless bridge between complex legislation and professional legal advice through cutting-edge vertical AI.</p>
+            <p className="text-prestige-500 max-w-2xl mx-auto text-lg font-medium leading-relaxed">A secure workspace for legal research, drafting, and case analysis powered by vertical AI.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: MessageSquare, title: t("instantAdvice"), desc: "Instantly summarize UAE laws relevant to your specific situation with direct article references." },
-              { icon: ShieldCheck, title: t("verifiedLaws"), desc: "Onboarded and verified legal professionals specialized in various fields of UAE law." },
-              { icon: Gavel, title: t("expertLawyers"), desc: "Securely book and pay for legal consultations directly through the platform." }
+              { icon: MessageSquare, title: "Research Answers", desc: "Summarize UAE laws with direct article-level references and structured citations." },
+              { icon: ShieldCheck, title: "Verified Sources", desc: "Work from verified legislation, matter notes, and trusted legal references." },
+              { icon: Gavel, title: "Secure Workflows", desc: "Manage internal research sessions and team analysis in one private workspace." }
             ].map((f, i) => (
               <motion.div 
                 key={i} 
@@ -653,17 +647,17 @@ function Assistant() {
               </h2>
               <p className="text-lg text-prestige-500 font-medium leading-relaxed">
                 {isRtl 
-                  ? "صف حالتك أو حدد مواد القانون الإماراتي للحصول على تحليل قانوني متميز ودقيق."
-                  : "Describe your situation or specify UAE law articles for a distinctive & polished legal analysis."
+                  ? "صِغ المسألة كإشكال قانوني أو مهمة بحث أو صياغة للحصول على تحليل مهني دقيق."
+                  : "Frame the matter as a legal issue, research question, or drafting task for a technical memo-style analysis."
                 }
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-3xl px-6">
               {[
-                {q: language === 'en' ? "What are my rights as a tenant in Dubai?" : "ما هي حقوقي كمستأجر في دبي؟", icon: ShieldCheck},
-                {q: language === 'en' ? "UAE Labor Law on end-of-service gratuity" : "قانون العمل الإماراتي بشأن مكافأة نهاية الخدمة", icon: Briefcase},
-                {q: language === 'en' ? "Setting up a business in a Free Zone" : "تأسيس عمل تجاري في منطقة حرة", icon: Scale},
-                {q: language === 'en' ? "Inheritance laws for expats in UAE" : "قوانين الميراث للوافدين في الإمارات", icon: Users}
+                {q: language === 'en' ? "Draft an issue tree for termination claims under UAE Labour Law." : "أعد شجرة مسائل لدعوى إنهاء العلاقة العمالية بموجب قانون العمل الإماراتي.", icon: ShieldCheck},
+                {q: language === 'en' ? "Compare mainland, DIFC, and ADGM jurisdiction for a contract dispute." : "قارن الاختصاص بين البر الرئيسي وDIFC وADGM في نزاع عقدي.", icon: Briefcase},
+                {q: language === 'en' ? "Map the limitation periods and filing deadlines for a civil claim in Dubai." : "حدّد مدد التقادم ومواعيد رفع الدعوى المدنية في دبي.", icon: Scale},
+                {q: language === 'en' ? "Draft a memo on inheritance exposure for an expat with assets in the UAE." : "أعد مذكرة حول مخاطر الميراث لمقيم أجنبي لديه أصول في الإمارات.", icon: Users}
               ].map(item => (
                 <button 
                   key={item.q} 
@@ -732,10 +726,10 @@ function Assistant() {
                           <Volume2 className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => navigate("/lawyers")}
+                          onClick={() => navigate("/assistant")}
                           className="p-3 bg-prestige-950 text-white rounded-2xl hover:bg-accent-gold transition-all flex items-center gap-2 px-5 group active:scale-95 shadow-xl shadow-prestige-950/20"
                         >
-                          <span className="text-[10px] font-black uppercase tracking-widest leading-none">{t("findExpert")}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest leading-none">{t("assistant")}</span>
                           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </button>
                       </div>
@@ -1273,7 +1267,7 @@ function Appointments() {
           }}
           className="px-12 py-5 bg-prestige-950 text-white rounded-2xl font-black hover:bg-accent-indigo transition-all shadow-2xl shadow-prestige-950/20 active:scale-95"
         >
-          {t("signIn") || "Sign In with Google"}
+          {t("signIn") || "Sign in"}
         </button>
       </div>
     );
@@ -1311,10 +1305,10 @@ function Appointments() {
             <p className="text-prestige-500 font-medium max-w-sm mx-auto">You haven't booked any legal consultations yet. Explore our directory to find a verified expert.</p>
           </div>
           <button 
-             onClick={() => navigate("/lawyers")} 
+             onClick={() => navigate("/assistant")} 
              className="px-8 py-4 bg-accent-indigo text-white rounded-2xl font-black hover:bg-prestige-950 transition-all shadow-xl shadow-accent-indigo/20 active:scale-95 flex items-center gap-3 mx-auto"
           >
-             Browse Experts <ArrowRight className="w-5 h-5" />
+             Open Copilot <ArrowRight className="w-5 h-5" />
           </button>
         </div>
       ) : (
@@ -1399,7 +1393,7 @@ function Appointments() {
                                if (!isRefundable) {
                                  setRescheduleDialog({ isOpen: true, aptId: apt.id, lawyerId: apt.lawyerId, isRefundable: false });
                                } else {
-                                 navigate(`/lawyers/${apt.lawyerId}?reschedule=${apt.id}`);
+                               navigate(`/lawyers/${apt.lawyerId}?reschedule=${apt.id}`);
                                }
                             }}
                             className="text-[10px] text-accent-indigo font-black uppercase tracking-[0.2em] hover:text-prestige-950 transition-colors flex items-center gap-1.5"
@@ -1534,7 +1528,7 @@ function ProtectedRoute({ requireUser = false, requireLawyer = false, requireAdm
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <UserProvider>
         <Layout>
           <Routes>
@@ -1543,7 +1537,7 @@ export default function App() {
               <ProtectedRoute><Assistant /></ProtectedRoute>
              } />
             <Route path="/laws" element={<Legislation />} />
-            <Route path="/lawyers" element={<Lawyers />} />
+            <Route path="/lawyers" element={<LawyersPage />} />
             <Route path="/lawyers/:id" element={<LawyerProfile />} />
             <Route path="/register-lawyer" element={<LawyerRegistration />} />
             <Route path="/dashboard" element={
@@ -1564,6 +1558,6 @@ export default function App() {
           </Routes>
         </Layout>
       </UserProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }

@@ -15,19 +15,19 @@ import {
   MoreVertical,
   Activity
 } from "lucide-react";
-import { auth, db } from "../lib/firebase";
+import { db } from "../lib/firebase";
 import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { useLanguage } from "../contexts/LanguageContext";
-import { motion } from "motion/react";
+import { motion } from "../lib/motion-shim";
 import { format } from "date-fns";
+import { useUser } from "../contexts/UserContext";
 
 export default function LawyerDashboard() {
   const { t, isRtl } = useLanguage();
   const navigate = useNavigate();
-  const [user] = useAuthState(auth);
+  const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     activeCases: 0,

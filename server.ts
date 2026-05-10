@@ -1,9 +1,24 @@
+import "dotenv/config";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import Stripe from "stripe";
+import {
+  addDocument,
+  commitBatch,
+  deleteDocument,
+  getDocument,
+  queryCollection,
+  setDocument,
+  updateDocument,
+  type FirestoreBatchRequest,
+  type FirestoreAddRequest,
+  type FirestoreDocRequest,
+  type FirestoreQueryRequest,
+  type FirestoreWriteRequest,
+} from "./src/server/pocFirestoreStore";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +31,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT || 3000);
 
   app.use(express.json());
 
@@ -38,6 +53,47 @@ async function startServer() {
       cwd: process.cwd(),
       files: fs.existsSync(distPath) ? fs.readdirSync(distPath) : []
     });
+  });
+
+  app.get("/api/firestore/health", (_req, res) => {
+    res.json({ status: "ok", backend: "poc-firestore-store" });
+  });
+
+  app.post("/api/firestore/query", (req, res) => {
+    const payload = req.body as FirestoreQueryRequest;
+    res.json(queryCollection(payload));
+  });
+
+  app.post("/api/firestore/get", (req, res) => {
+    const payload = req.body as FirestoreDocRequest;
+    res.json(getDocument(payload));
+  });
+
+  app.post("/api/firestore/add", (req, res) => {
+    const payload = req.body as FirestoreAddRequest;
+    res.json(addDocument(payload));
+  });
+
+  app.post("/api/firestore/set", (req, res) => {
+    const payload = req.body as FirestoreWriteRequest;
+    res.json(setDocument(payload));
+  });
+
+  app.post("/api/firestore/update", (req, res) => {
+    const payload = req.body as FirestoreWriteRequest;
+    res.json(updateDocument(payload));
+  });
+
+  app.post("/api/firestore/delete", (req, res) => {
+    const payload = req.body as FirestoreDocRequest;
+    deleteDocument(payload);
+    res.json({ ok: true });
+  });
+
+  app.post("/api/firestore/batch", (req, res) => {
+    const payload = req.body as FirestoreBatchRequest;
+    commitBatch(payload);
+    res.json({ ok: true });
   });
 
   app.post("/api/create-checkout-session", async (req, res) => {

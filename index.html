@@ -4,13 +4,59 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Huqiqiyy UAE | Legal Navigator</title>
+    <meta name="app-base-path" content="%BASE_URL%" />
+    <script>
+      const appBaseMeta = document.querySelector('meta[name="app-base-path"]');
+      const rawAppBasePath = (appBaseMeta?.getAttribute("content") || "").trim();
+      const normalizedAppBasePath = !rawAppBasePath || rawAppBasePath === "./" || rawAppBasePath === "."
+        ? "/"
+        : `/${rawAppBasePath.replace(/^\/+|\/+$/g, "")}/`;
+      const defaultDevOrigin = "http://127.0.0.1:3000/";
+      const stripLeadingSlash = (value) => value.replace(/^\/+/, "");
+      const toHashUrl = (pathname) => {
+        if (normalizedAppBasePath === "/") {
+          return `${location.origin}/#/${stripLeadingSlash(pathname)}${location.search}`;
+        }
+
+        const basePathNoSlash = normalizedAppBasePath.slice(0, -1);
+        let routePath = pathname;
+
+        if (pathname.startsWith(normalizedAppBasePath)) {
+          routePath = pathname.slice(normalizedAppBasePath.length);
+        } else if (pathname.startsWith(`${basePathNoSlash}/`)) {
+          routePath = pathname.slice(basePathNoSlash.length + 1);
+        }
+
+        routePath = stripLeadingSlash(routePath);
+        return `${location.origin}${normalizedAppBasePath}#/${routePath}${location.search}`;
+      };
+
+      if (location.protocol === "file:") {
+        location.replace(defaultDevOrigin);
+      } else if (!location.hash) {
+        const isProductionHost = location.hostname.endsWith("onrender.com") || location.hostname.endsWith("quirkly.life");
+
+        if (normalizedAppBasePath === "/") {
+          if (location.pathname !== "/") {
+            location.replace(toHashUrl(location.pathname));
+          } else if (isProductionHost) {
+            location.replace(`${location.origin}/#/assistant${location.search}`);
+          }
+        } else {
+          if (location.pathname === normalizedAppBasePath || location.pathname === normalizedAppBasePath.slice(0, -1)) {
+            location.replace(`${location.origin}${normalizedAppBasePath}#/`);
+          } else if (location.pathname !== "/") {
+            location.replace(toHashUrl(location.pathname));
+          }
+        }
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx?v=20260509"></script>
   </body>
 </html>
-

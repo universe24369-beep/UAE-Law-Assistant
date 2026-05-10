@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "../lib/motion-shim";
 import { 
   Star, 
   MapPin, 
@@ -20,15 +20,15 @@ import {
 import { getLawyerById, Lawyer } from "../services/lawyerService";
 import { useLanguage } from "../contexts/LanguageContext";
 import { cn } from "../lib/utils";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, db, signInWithGoogle, handleFirestoreError, OperationType } from "../lib/firebase";
+import { db, signInWithGoogle, handleFirestoreError, OperationType } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp, updateDoc, doc } from "firebase/firestore";
+import { useUser } from "../contexts/UserContext";
 
 export default function LawyerProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, isRtl } = useLanguage();
-  const [user] = useAuthState(auth);
+  const { user } = useUser();
   const [lawyer, setLawyer] = useState<Lawyer | null>(null);
   const [loading, setLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
@@ -202,10 +202,10 @@ export default function LawyerProfile() {
           </div>
           <h2 className="text-3xl font-black text-prestige-950">{t("expertNotFound")}</h2>
           <button 
-            onClick={() => navigate("/lawyers")}
+            onClick={() => navigate("/appointments")}
             className="px-8 py-3 bg-accent-indigo text-white rounded-xl font-bold hover:bg-prestige-950 transition-all"
           >
-            {t("returnToDirectory")}
+            Return to Appointments
           </button>
         </div>
       </div>

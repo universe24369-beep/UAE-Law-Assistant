@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "motion/react";
+import { motion } from "../lib/motion-shim";
 import { Scale, Users, Gavel, ShieldCheck, Briefcase, ArrowRight } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 

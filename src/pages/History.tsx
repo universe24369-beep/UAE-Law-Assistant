@@ -1,47 +1,47 @@
 import React, { useState, useEffect } from "react";
 import { collection, query, where, orderBy, onSnapshot, getDocs } from "firebase/firestore";
-import { auth, db, handleFirestoreError, OperationType, signInWithGoogle } from "../lib/firebase";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { motion, AnimatePresence } from "motion/react";
+import { db, handleFirestoreError, OperationType, signInWithGoogle, startDemoSession } from "../lib/firebase";
+import { motion, AnimatePresence } from "../lib/motion-shim";
 import { MessageSquare, Calendar, ChevronRight, Scale, Search, Trash2, ShieldCheck } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "../lib/utils";
 import { useLanguage } from "../contexts/LanguageContext";
 import { format } from "date-fns";
+import { useUser } from "../contexts/UserContext";
+import { createMarkdownComponents } from "../lib/safety";
 
 export default function History() {
-  const [user] = useAuthState(auth);
+  const { user } = useUser();
   const { t, isRtl } = useLanguage();
+  const clerkConfigured = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
-  const [activeTab, setActiveTab] = useState<"client" | "technical">("client");
   const [cases, setCases] = useState<Record<string, string>>({}); // id -> title mapping
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const markdownComponents = createMarkdownComponents();
 
   useEffect(() => {
     if (!user) return;
 
-    // Determine path based on activeTab
-    const path = activeTab === "client" ? "ai_conversations" : "lawyer_co_pilots";
-    
-    // We'll also fetch cases if it's the technical tab to map titles
-    if (activeTab === "technical") {
-      const fetchCases = async () => {
-        try {
-          const q = query(collection(db, "cases"), where("lawyerId", "==", user.uid));
-          const snap = await getDocs(q);
-          const caseMap: Record<string, string> = {};
-          snap.docs.forEach(doc => {
-            caseMap[doc.id] = doc.data().title;
-          });
-          setCases(caseMap);
-        } catch (err) {
-          console.error("Error fetching cases for history:", err);
-        }
-      };
-      fetchCases();
-    }
+    const path = "lawyer_co_pilots";
+
+    const fetchCases = async () => {
+      try {
+        const q = query(collection(db, "cases"), where("lawyerId", "==", user.uid));
+        const snap = await getDocs(q);
+        const caseMap: Record<string, string> = {};
+        snap.docs.forEach(doc => {
+          caseMap[doc.id] = doc.data().title;
+        });
+        setCases(caseMap);
+      } catch (err) {
+        console.error("Error fetching cases for history:", err);
+      }
+    };
+    fetchCases();
 
     const q = query(
       collection(db, path),
@@ -70,7 +70,7 @@ export default function History() {
     });
 
     return () => unsubscribe();
-  }, [user, showArchived, activeTab]);
+  }, [user, showArchived]);
 
   const activeConversations = conversations.filter(c => !c.isArchived);
   const archivedConversations = conversations.filter(c => c.isArchived);
@@ -90,16 +90,36 @@ export default function History() {
         </div>
         <button 
           onClick={async () => {
+            setSignInError(null);
+            setIsSigningIn(true);
             try {
               await signInWithGoogle();
             } catch (err) {
               console.error("History sign-in error:", err);
+              setSignInError(err instanceof Error ? err.message : "Unable to sign in right now.");
+            } finally {
+              setIsSigningIn(false);
             }
           }}
           className="px-12 py-5 bg-prestige-950 text-white rounded-2xl font-black hover:bg-accent-indigo transition-all shadow-2xl shadow-prestige-950/20 active:scale-95"
         >
-          {t("signInGoogle") || "Sign In with Google"}
+          {isSigningIn ? "Signing in..." : (t("login") || "Sign in")}
         </button>
+        {!clerkConfigured && (
+          <p className="text-xs font-medium text-prestige-400 max-w-md text-center">
+            Real login is not configured yet. Add <span className="font-black">VITE_CLERK_PUBLISHABLE_KEY</span> to enable Clerk; the button below will keep using demo access for now.
+          </p>
+        )}
+        <button
+          onClick={() => {
+            startDemoSession();
+            window.dispatchEvent(new Event("huqiqiyy-demo-session-changed"));
+          }}
+          className="px-12 py-5 bg-prestige-50 text-prestige-700 rounded-2xl font-black border border-prestige-100 hover:bg-prestige-100 transition-all active:scale-95"
+        >
+          Continue in Demo Mode
+        </button>
+        {signInError && <p className="text-sm text-red-500 font-medium max-w-md">{signInError}</p>}
       </div>
     );
   }
@@ -119,31 +139,10 @@ export default function History() {
             <span className="text-[10px] font-black text-accent-gold uppercase tracking-[0.3em]">{t("secureRecords") || "Secure Records"}</span>
           </div>
           <h2 className="text-3xl font-black text-prestige-900 tracking-tighter leading-none mb-6">
-            {t("legalHistory") || "Legal History"}
+            Research Archive
           </h2>
           
           <div className="flex flex-col gap-4">
-            <div className="flex gap-2 p-1 bg-prestige-50 rounded-xl border border-prestige-100">
-              <button 
-                onClick={() => { setActiveTab("client"); setSelectedId(null); }}
-                className={cn(
-                  "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
-                  activeTab === "client" ? "bg-white text-prestige-950 shadow-sm border border-prestige-200" : "text-prestige-400 hover:text-prestige-600"
-                )}
-              >
-                Client Chats
-              </button>
-              <button 
-                onClick={() => { setActiveTab("technical"); setSelectedId(null); }}
-                className={cn(
-                  "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
-                  activeTab === "technical" ? "bg-white text-prestige-950 shadow-sm border border-prestige-200" : "text-prestige-400 hover:text-prestige-600"
-                )}
-              >
-                Lawyer Co-Pilot
-              </button>
-            </div>
-
             <div className="flex gap-2 p-1 bg-prestige-50 rounded-xl border border-prestige-100">
               <button 
                 onClick={() => setShowArchived(false)}
@@ -245,10 +244,10 @@ export default function History() {
                   </button>
                   <div className={cn(isRtl ? "text-right" : "text-left")}>
                     <h3 className="text-2xl font-black text-prestige-950 tracking-tighter">
-                      {activeTab === "technical" && selectedChat.caseId ? (
+                      {selectedChat.caseId ? (
                         <>Case: <span className="text-accent-gold">{cases[selectedChat.caseId] || "Technical Session"}</span></>
                       ) : (
-                        t("caseAnalysisArchive") || "Case Analysis Archive"
+                        t("caseAnalysisArchive") || "Research Session Archive"
                       )}
                     </h3>
                     <p className="text-xs text-prestige-400 font-bold uppercase tracking-widest mt-1">
@@ -280,7 +279,7 @@ export default function History() {
                         isRtl && m.role === 'user' ? "flex-row-reverse" : "flex-row"
                       )}>
                         <div className={cn("w-1.5 h-1.5 rounded-full", m.role === 'user' ? "bg-prestige-300" : "bg-accent-indigo animate-pulse")} />
-                        {m.role === 'user' ? (t("inquiry") || "Client Inquiry") : (t("intelligenceReport") || "Intelligence Report")}
+                        {m.role === 'user' ? (t("inquiry") || "Research Prompt") : (t("intelligenceReport") || "Strategic Analysis")}
                       </div>
                       <div className={cn(
                         "leading-loose rounded-[2.5rem] shadow-2xl",
@@ -293,6 +292,7 @@ export default function History() {
                         ) : (
                           <ReactMarkdown
                             components={{
+                              ...markdownComponents,
                               strong: ({node, ...props}) => <strong className="text-accent-indigo font-black" {...props} />,
                               blockquote: ({node, ...props}) => <blockquote className={cn("border-accent-gold bg-prestige-50 p-8 italic my-8 shadow-sm", isRtl ? "border-r-4 rounded-l-[2rem]" : "border-l-4 rounded-r-[2rem]")} {...props} />
                             }}
@@ -318,7 +318,7 @@ export default function History() {
                       <div className={cn(isRtl ? "text-right" : "text-left")}>
                         <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">{t("privacyProtocols") || "Privacy Protocols"}</p>
                         <p className="text-prestige-500 font-medium leading-relaxed">
-                          {t("privacyNote") || "For your security, original legal documents uploaded during this session were processed strictly in-memory and have been purged. Only the vertical AI summary and strategic references are retained in this archive."}
+                          {t("privacyNote") || "For your security, original legal documents uploaded during this session were processed strictly in-memory and have been purged. Only the legal analysis summary and strategic references are retained in this archive."}
                         </p>
                       </div>
                     </div>
@@ -332,8 +332,8 @@ export default function History() {
                 <Search className="w-10 h-10" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-2xl font-black text-prestige-950">{t("selectArchive") || "Select an Archive"}</h3>
-                <p className="text-prestige-500 font-medium">{t("selectArchiveDesc") || "Browse your legal history from the sidebar to review past analyses and references."}</p>
+                <h3 className="text-2xl font-black text-prestige-950">Select a Research Session</h3>
+                <p className="text-prestige-500 font-medium">Browse your legal research archive from the sidebar to review past analyses and references.</p>
               </div>
             </div>
           )}

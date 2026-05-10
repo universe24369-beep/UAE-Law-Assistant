@@ -136,6 +136,34 @@ service cloud.firestore {
     }
 
     // ==========================================
+    // COLLECTION: SUPPORT INCIDENTS
+    // ==========================================
+    function isValidSupportIncident(data) {
+      return data.userId == request.auth.uid &&
+             data.userRole in ['client', 'lawyer'] &&
+             data.source == 'support_mcp' &&
+             data.route is string &&
+             data.pageTitle is string &&
+             data.category in ['login', 'account', 'upload', 'navigation', 'performance', 'payment', 'bug', 'other'] &&
+             data.severity in ['low', 'medium', 'high'] &&
+             data.status in ['new', 'needs_screenshot', 'triaged', 'resolved'] &&
+             data.title is string &&
+             data.summary is string &&
+             data.userMessage is string &&
+             data.testScenarios is list &&
+             data.manualConfirmationRequired == true &&
+             data.publicationGate == 'chat_confirmation';
+    }
+
+    match /support_incidents/{incidentId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidSupportIncident(incoming());
+      allow update: if isAdmin() || (isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
     // COLLECTION: AI CONVERSATIONS
     // ==========================================
     match /ai_conversations/{convId} {

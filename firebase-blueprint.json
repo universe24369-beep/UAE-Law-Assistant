@@ -240,6 +240,42 @@
       },
       "description": "Customer support interactions with AI and admin visibility."
     },
+    "support_incidents/{incidentId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userEmail": { "type": ["string", "null"] },
+          "userRole": { "type": "string", "enum": ["client", "lawyer"] },
+          "route": { "type": "string" },
+          "pageTitle": { "type": "string" },
+          "source": { "type": "string", "enum": ["support_mcp"] },
+          "category": { "type": "string", "enum": ["login", "account", "upload", "navigation", "performance", "payment", "bug", "other"] },
+          "severity": { "type": "string", "enum": ["low", "medium", "high"] },
+          "status": { "type": "string", "enum": ["new", "needs_screenshot", "triaged", "resolved"] },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "userMessage": { "type": "string" },
+          "testScenarios": { "type": "array" },
+          "screenshot": {
+            "type": ["object", "null"],
+            "properties": {
+              "fileName": { "type": "string" },
+              "mimeType": { "type": "string" },
+              "fileSize": { "type": "number" },
+              "previewDataUrl": { "type": ["string", "null"] }
+            }
+          },
+          "manualConfirmationRequired": { "type": "boolean" },
+          "publicationGate": { "type": "string", "enum": ["chat_confirmation"] },
+          "adminRecipients": { "type": "array" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["userId", "userRole", "route", "pageTitle", "source", "category", "severity", "status", "title", "summary", "userMessage", "testScenarios", "manualConfirmationRequired", "publicationGate", "adminRecipients", "createdAt", "updatedAt"]
+      },
+      "description": "Bug-only support incidents with test scenarios and manual chat confirmation gate."
+    },
     "admins/{userId}": {
       "schema": {
         "type": "object",
@@ -256,9 +292,15 @@
       "schema": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "enum": ["gemini_query", "legal_search", "document_generation", "support_query"] },
+          "type": { "type": "string", "enum": ["openrouter_query", "legal_search", "document_generation", "support_query"] },
           "userId": { "type": "string" },
           "tokens": { "type": "number" },
+          "totalTokens": { "type": "number" },
+          "inputTokens": { "type": "number" },
+          "outputTokens": { "type": "number" },
+          "model": { "type": ["string", "null"] },
+          "utilizationPct": { "type": ["number", "null"] },
+          "usageStage": { "type": ["string", "null"] },
           "timestamp": { "type": "string", "format": "date-time" },
           "status": { "type": "string", "enum": ["success", "error"] }
         },

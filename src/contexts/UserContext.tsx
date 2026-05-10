@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
-import { auth, db } from "../lib/firebase";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
 import { getLawyerByUserId, Lawyer } from "../services/lawyerService";
+import { getDemoUser, clearDemoSession } from "../lib/firebase";
+import { clearSessionUser, isAllowedAdminEmail, setSessionUser } from "../lib/session";
+import { useAuthBridge } from "./AuthBridge";
 
 interface UserContextType {
   user: any;
@@ -17,12 +19,15 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, loading] = useAuthState(auth);
+  const { user: clerkUser, isLoaded } = useAuthBridge();
+  const [demoUser, setDemoUser] = useState(getDemoUser());
   const [lawyerProfile, setLawyerProfile] = useState<Lawyer | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const hasInitializedRole = useRef(false);
 
-  const isSuperAdmin = user?.email === "universe.24.369@gmail.com";
+  const user = clerkUser || demoUser;
+  const loading = !isLoaded && !demoUser;
+  const isSuperAdmin = isAllowedAdminEmail(user?.email);
 
   useEffect(() => {
     async function checkLawyer() {
@@ -45,7 +50,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setLawyerProfile(null);
         }
-        
+
         hasInitializedRole.current = true;
       } else {
         setLawyerProfile(null);
@@ -55,6 +60,38 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     checkLawyer();
   }, [user, isSuperAdmin]);
+
+  useEffect(() => {
+    if (clerkUser) {
+      setSessionUser(clerkUser);
+      return;
+    }
+
+    if (demoUser) {
+      setSessionUser(demoUser);
+      return;
+    }
+
+    clearSessionUser();
+  }, [clerkUser, demoUser]);
+
+  useEffect(() => {
+    const syncDemo = () => setDemoUser(getDemoUser());
+    const handleSignOut = () => {
+      clearDemoSession();
+      setDemoUser(null);
+    };
+    window.addEventListener("focus", syncDemo);
+    window.addEventListener("storage", syncDemo);
+    window.addEventListener("huqiqiyy-demo-session-changed", syncDemo as EventListener);
+    window.addEventListener("huqiqiyy-sign-out", handleSignOut);
+    return () => {
+      window.removeEventListener("focus", syncDemo);
+      window.removeEventListener("storage", syncDemo);
+      window.removeEventListener("huqiqiyy-demo-session-changed", syncDemo as EventListener);
+      window.removeEventListener("huqiqiyy-sign-out", handleSignOut);
+    };
+  }, []);
 
   const toggleLawyerRole = async () => {
     if (!user || !isSuperAdmin) return;

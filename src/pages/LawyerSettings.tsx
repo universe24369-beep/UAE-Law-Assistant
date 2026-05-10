@@ -8,16 +8,16 @@ import {
   CheckCircle2,
   AlertCircle
 } from "lucide-react";
-import { auth, db, handleFirestoreError, OperationType } from "../lib/firebase";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { cn } from "../lib/utils";
 import { Lawyer, WorkingHours } from "../services/lawyerService";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useUser } from "../contexts/UserContext";
 
 export default function LawyerDashboard() {
   const { t, isRtl } = useLanguage();
-  const [user] = useAuthState(auth);
+  const { user } = useUser();
   const [lawyer, setLawyer] = useState<Lawyer | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

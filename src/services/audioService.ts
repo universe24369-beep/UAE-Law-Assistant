@@ -1,38 +1,14 @@
-import { ai, MODELS } from "../lib/gemini";
-import { Modality } from "@google/genai";
-
 export async function transcribeAudioText(base64Audio: string, mimeType: string, language: string): Promise<string> {
-  const response = await ai.models.generateContent({
-    model: Object.values(MODELS)[0] || "gemini-3.1-flash-preview",
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { inlineData: { mimeType, data: base64Audio.split(",")[1] || base64Audio } },
-          { text: `Transcribe this audio precisely. ${language === 'ar' ? 'Output purely Arabic transcription.' : 'Output purely English transcription.'}` }
-        ]
-      }
-    ]
-  });
-  return response.text || "";
+  void base64Audio;
+  void mimeType;
+  void language;
+  throw new Error("Audio transcription is not wired to OpenRouter yet.");
 }
 
 export async function generateSpeechTTS(text: string, language: string): Promise<string | null> {
-  const response = await ai.models.generateContent({
-    model: "gemini-3.1-flash-tts-preview",
-    contents: [{ parts: [{ text }] }],
-    config: {
-      responseModalities: ["AUDIO"] as any,
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: language === 'ar' ? 'Charon' : 'Kore' }
-        }
-      }
-    }
-  });
-  
-  const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-  return base64Audio || null;
+  void text;
+  void language;
+  throw new Error("OpenRouter does not provide the TTS bridge used by this app yet.");
 }
 
 export async function playPCM16Audio(base64Audio: string, sampleRate = 24000): Promise<AudioBufferSourceNode> {
